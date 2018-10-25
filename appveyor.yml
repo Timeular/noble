@@ -11,10 +11,6 @@ environment:
       RVERSION: '6.14.4'
     - RUNTIME: 'node'
       RVERSION: '8.12.0'
-    - RUNTIME: 'node'
-      RVERSION: '9.11.2'
-    - RUNTIME: 'node'
-      RVERSION: '10.10.0'
 
     # electron
     - RUNTIME: 'electron'
@@ -28,7 +24,7 @@ environment:
 install:
   # install the right node version
   - ps: $in_node_version = $env:RVERSION
-  - ps: if ($env:RUNTIME -match "electron") { $in_node_version="10.10.0"; }
+  - ps: if ($env:RUNTIME -match "electron") { $in_node_version="8.12.0"; }
   - ps: echo "running node $in_node_version (was $env:RVERSION) on $env:platform"
   - ps: Install-Product node $in_node_version $env:platform
   - ps: |
