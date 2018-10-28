@@ -21,8 +21,15 @@ void NotifyMap::Add(std::string uuid, GattCharacteristic characteristic, winrt::
 
 bool NotifyMap::IsSubscribed(std::string uuid, GattCharacteristic characteristic)
 {
-    Key key = { uuid, characteristic.Service().Uuid(), characteristic.Uuid() };
-    return mNotifyMap.find(key) != mNotifyMap.end();
+    try
+    {
+      Key key = { uuid, characteristic.Service().Uuid(), characteristic.Uuid() };
+      return mNotifyMap.find(key) != mNotifyMap.end();
+    }
+    catch (...)
+    {
+      return false;
+    }
 }
 
 void NotifyMap::Unsubscribe(std::string uuid, GattCharacteristic characteristic)

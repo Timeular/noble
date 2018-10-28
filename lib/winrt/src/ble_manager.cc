@@ -10,6 +10,7 @@
 
 #include <winrt/Windows.Storage.Streams.h>
 using winrt::Windows::Devices::Bluetooth::BluetoothCacheMode;
+using winrt::Windows::Devices::Bluetooth::BluetoothError;
 using winrt::Windows::Devices::Bluetooth::BluetoothConnectionStatus;
 using winrt::Windows::Storage::Streams::DataReader;
 using winrt::Windows::Storage::Streams::DataWriter;
@@ -165,6 +166,11 @@ void BLEManager::StopScan()
 void BLEManager::OnScanStopped(BluetoothLEAdvertisementWatcher watcher,
                                const BluetoothLEAdvertisementWatcherStoppedEventArgs& args)
 {
+    if (mRadioState == AdapterState::On && args.Error() == BluetoothError::RadioNotAvailable) {
+        mAdvertismentWatcher.Start();
+        return;
+
+    }
     mEmit.ScanState(false);
 }
 
