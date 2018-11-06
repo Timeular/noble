@@ -27,6 +27,7 @@ public:
     void WriteValue(const std::string& uuid, const std::string& serviceUuid, const std::string& characteristicUuid, const std::string& descriptorUuid);
     void ReadHandle(const std::string& uuid, int descriptorHandle, const Data& data);
     void WriteHandle(const std::string& uuid, int descriptorHandle);
+    void Log(const std::string& log);
     // clang-format on
 protected:
     std::shared_ptr<ThreadSafeCallback> mCallback;

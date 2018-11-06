@@ -25,9 +25,16 @@ template <typename O, typename M, class... Types> auto bind2(O* object, M method
     return std::bind(method, object, std::placeholders::_1, std::placeholders::_2, args...);
 }
 
-#define LOGE(message, ...) printf(__FUNCTION__ ": " message "\n", __VA_ARGS__)
+#define LOGE(message, ...) \
+    {\
+        char buff[255];\
+        snprintf(buff, sizeof(buff), __FUNCTION__ ": " message, __VA_ARGS__);\
+        std::string buffAsStdStr = buff;\
+        mEmit.Log(buffAsStdStr);\
+    }
 
 #define CHECK_DEVICE()                                     \
+    LOGE(""); \
     if (mDeviceMap.find(uuid) == mDeviceMap.end())         \
     {                                                      \
         LOGE("device with id %s not found", uuid.c_str()); \
@@ -182,8 +189,15 @@ bool BLEManager::Connect(const std::string& uuid)
         return false;
     }
     PeripheralWinrt& peripheral = mDeviceMap[uuid];
-    auto completed = bind2(this, &BLEManager::OnConnected, uuid);
-    BluetoothLEDevice::FromBluetoothAddressAsync(peripheral.bluetoothAddress).Completed(completed);
+    if (!peripheral.device.has_value())
+    {
+        auto completed = bind2(this, &BLEManager::OnConnected, uuid);
+        BluetoothLEDevice::FromBluetoothAddressAsync(peripheral.bluetoothAddress).Completed(completed);
+    }
+    else
+    {
+        mEmit.Connected(uuid);
+    }
     return true;
 }
 
@@ -295,7 +309,7 @@ bool BLEManager::DiscoverIncludedServices(const std::string& uuid, const UUID& s
     CHECK_DEVICE();
     IFDEVICE(device, uuid)
     {
-        peripheral.GetService(serviceUuid, [=](std::optional<GattDeviceService> service) {
+        peripheral.GetService(serviceUuid, [=](std::optional<GattDeviceService> service, std::string error) {
             if (service)
             {
                 std::string serviceId = toStr(serviceUuid);
@@ -305,7 +319,7 @@ bool BLEManager::DiscoverIncludedServices(const std::string& uuid, const UUID& s
             }
             else
             {
-                LOGE("GetService error");
+                LOGE("%s", error.c_str());
             }
         });
         return true;
@@ -344,7 +358,7 @@ bool BLEManager::DiscoverCharacteristics(const std::string& uuid, const UUID& se
     CHECK_DEVICE();
     IFDEVICE(device, uuid)
     {
-        peripheral.GetService(serviceUuid, [=](std::optional<GattDeviceService> service) {
+        peripheral.GetService(serviceUuid, [=](std::optional<GattDeviceService> service, std::string error) {
             if (service)
             {
                 std::string serviceId = toStr(serviceUuid);
@@ -354,7 +368,7 @@ bool BLEManager::DiscoverCharacteristics(const std::string& uuid, const UUID& se
             }
             else
             {
-                LOGE("GetService error");
+                LOGE("%s", error.c_str());
             }
         });
         return true;
@@ -395,7 +409,7 @@ bool BLEManager::Read(const std::string& uuid, const UUID& serviceUuid,
     IFDEVICE(device, uuid)
     {
         peripheral.GetCharacteristic(
-            serviceUuid, characteristicUuid, [=](std::optional<GattCharacteristic> characteristic) {
+            serviceUuid, characteristicUuid, [=](std::optional<GattCharacteristic> characteristic, std::string error) {
                 if (characteristic)
                 {
                     std::string serviceId = toStr(serviceUuid);
@@ -406,7 +420,7 @@ bool BLEManager::Read(const std::string& uuid, const UUID& serviceUuid,
                 }
                 else
                 {
-                    LOGE("GetCharacteristic error");
+                    LOGE("%s", error.c_str());
                 }
             });
         return true;
@@ -447,7 +461,7 @@ bool BLEManager::Write(const std::string& uuid, const UUID& serviceUuid,
     IFDEVICE(device, uuid)
     {
         peripheral.GetCharacteristic(
-            serviceUuid, characteristicUuid, [=](std::optional<GattCharacteristic> characteristic) {
+            serviceUuid, characteristicUuid, [=](std::optional<GattCharacteristic> characteristic, std::string error) {
                 if (characteristic)
                 {
                     std::string serviceId = toStr(serviceUuid);
@@ -463,7 +477,7 @@ bool BLEManager::Write(const std::string& uuid, const UUID& serviceUuid,
                 }
                 else
                 {
-                    LOGE("GetCharacteristic error");
+                    LOGE("%s", error.c_str());
                 }
             });
         return true;
@@ -504,7 +518,7 @@ bool BLEManager::Notify(const std::string& uuid, const UUID& serviceUuid,
     CHECK_DEVICE();
     IFDEVICE(device, uuid)
     {
-        auto onCharacteristic = [=](std::optional<GattCharacteristic> characteristic) {
+        auto onCharacteristic = [=](std::optional<GattCharacteristic> characteristic, std::string error) {
             if (characteristic)
             {
                 std::string serviceId = toStr(serviceUuid);
@@ -551,7 +565,7 @@ bool BLEManager::Notify(const std::string& uuid, const UUID& serviceUuid,
             }
             else
             {
-                LOGE("GetCharacteristic error");
+                LOGE("%s", error.c_str());
             }
         };
         peripheral.GetCharacteristic(serviceUuid, characteristicUuid, onCharacteristic);
@@ -598,7 +612,7 @@ bool BLEManager::DiscoverDescriptors(const std::string& uuid, const UUID& servic
     IFDEVICE(device, uuid)
     {
         peripheral.GetCharacteristic(
-            serviceUuid, characteristicUuid, [=](std::optional<GattCharacteristic> characteristic) {
+            serviceUuid, characteristicUuid, [=](std::optional<GattCharacteristic> characteristic, std::string error) {
                 if (characteristic)
                 {
                     std::string serviceId = toStr(serviceUuid);
@@ -610,7 +624,7 @@ bool BLEManager::DiscoverDescriptors(const std::string& uuid, const UUID& servic
                 }
                 else
                 {
-                    LOGE("GetCharacteristic error");
+                    LOGE("%s", error.c_str());
                 }
             });
         return true;
@@ -647,7 +661,7 @@ bool BLEManager::ReadValue(const std::string& uuid, const UUID& serviceUuid,
     {
         peripheral.GetDescriptor(
             serviceUuid, characteristicUuid, descriptorUuid,
-            [=](std::optional<GattDescriptor> descriptor) {
+            [=](std::optional<GattDescriptor> descriptor, std::string error) {
                 if (descriptor)
                 {
                     std::string serviceId = toStr(serviceUuid);
@@ -659,7 +673,7 @@ bool BLEManager::ReadValue(const std::string& uuid, const UUID& serviceUuid,
                 }
                 else
                 {
-                    LOGE("descriptor not found");
+                    LOGE("%s", error.c_str());
                 }
             });
         return true;
@@ -700,7 +714,7 @@ bool BLEManager::WriteValue(const std::string& uuid, const UUID& serviceUuid,
     CHECK_DEVICE();
     IFDEVICE(device, uuid)
     {
-        auto onDescriptor = [=](std::optional<GattDescriptor> descriptor) {
+        auto onDescriptor = [=](std::optional<GattDescriptor> descriptor, std::string error) {
             if (descriptor)
             {
                 std::string serviceId = toStr(serviceUuid);
@@ -715,7 +729,7 @@ bool BLEManager::WriteValue(const std::string& uuid, const UUID& serviceUuid,
             }
             else
             {
-                LOGE("descriptor not found");
+                LOGE("%s", error.c_str());
             }
         };
         peripheral.GetDescriptor(serviceUuid, characteristicUuid, descriptorUuid, onDescriptor);

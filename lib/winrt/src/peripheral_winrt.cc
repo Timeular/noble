@@ -11,6 +11,8 @@ using winrt::Windows::Devices::Bluetooth::GenericAttributeProfile::GattDeviceSer
 using winrt::Windows::Foundation::AsyncStatus;
 using winrt::Windows::Foundation::IAsyncOperation;
 
+#include <sstream>
+
 namespace std
 {
     std::size_t hash<UUID>::operator()(const UUID& k) const
@@ -91,7 +93,7 @@ void PeripheralWinrt::Disconnect()
 }
 
 void PeripheralWinrt::GetServiceFromDevice(
-    UUID serviceUuid, std::function<void(std::optional<GattDeviceService>)> callback)
+    UUID serviceUuid, std::function<void(std::optional<GattDeviceService>, std::string)> callback)
 {
     if (device.has_value())
     {
@@ -105,35 +107,35 @@ void PeripheralWinrt::GetServiceFromDevice(
                     {
                         GattDeviceService& s = service.Current();
                         cachedServices.insert(std::make_pair(serviceUuid, CachedService(s)));
-                        callback(s);
+                        callback(s, "");
                     }
                     else
                     {
-                        printf("GetGattServicesForUuidAsync: no service with given id\n");
-                        callback(std::nullopt);
+                        callback(std::nullopt, "GetServiceFromDevice: no service with given id");
                     }
                 }
                 else
                 {
-                    printf("GetGattServicesForUuidAsync: failed with status: %d\n", status);
-                    callback(std::nullopt);
+                    std::stringstream ss;
+                    ss << "GetServiceFromDevice: failed with status: ";
+                    ss << int(status);
+                    callback(std::nullopt, ss.str());
                 }
             });
     }
     else
     {
-        printf("GetGattServicesForUuidAsync: no device currently connected\n");
-        callback(std::nullopt);
+        callback(std::nullopt, "GetServiceFromDevice: no device currently connected");
     }
 }
 
 void PeripheralWinrt::GetService(UUID serviceUuid,
-                                 std::function<void(std::optional<GattDeviceService>)> callback)
+                                 std::function<void(std::optional<GattDeviceService>, std::string)> callback)
 {
     auto it = cachedServices.find(serviceUuid);
     if (it != cachedServices.end())
     {
-        callback(it->second.service);
+        callback(it->second.service, "");
     }
     else
     {
@@ -143,7 +145,7 @@ void PeripheralWinrt::GetService(UUID serviceUuid,
 
 void PeripheralWinrt::GetCharacteristicFromService(
     GattDeviceService service, UUID characteristicUuid,
-    std::function<void(std::optional<GattCharacteristic>)> callback)
+    std::function<void(std::optional<GattCharacteristic>, std::string)> callback)
 {
     service.GetCharacteristicsForUuidAsync(characteristicUuid, BluetoothCacheMode::Cached)
         .Completed([=](IAsyncOperation<GattCharacteristicsResult> result, auto& status) {
@@ -158,25 +160,26 @@ void PeripheralWinrt::GetCharacteristicFromService(
                     GattCharacteristic& c = characteristic.Current();
                     cachedService.characterisitics.insert(
                         std::make_pair(c.Uuid(), CachedCharacteristic(c)));
-                    callback(c);
+                    callback(c, "");
                 }
                 else
                 {
-                    printf("GetCharacteristicsForUuidAsync: no characteristic with given id\n");
-                    callback(std::nullopt);
+                    callback(std::nullopt, "GetCharacteristicFromService: no characteristic with given id");
                 }
             }
             else
             {
-                printf("GetCharacteristicsForUuidAsync: failed with status: %d\n", status);
-                callback(std::nullopt);
+                std::stringstream ss;
+                ss << "GetCharacteristicsForUuidAsync: failed with status: ";
+                ss << int(status);
+                callback(std::nullopt, ss.str());
             }
         });
 }
 
 void PeripheralWinrt::GetCharacteristic(
     UUID serviceUuid, UUID characteristicUuid,
-    std::function<void(std::optional<GattCharacteristic>)> callback)
+    std::function<void(std::optional<GattCharacteristic>, std::string)> callback)
 {
     auto it = cachedServices.find(serviceUuid);
     if (it != cachedServices.end())
@@ -185,7 +188,7 @@ void PeripheralWinrt::GetCharacteristic(
         auto cit = cachedService.characterisitics.find(characteristicUuid);
         if (cit != cachedService.characterisitics.end())
         {
-            callback(cit->second.characteristic);
+            callback(cit->second.characteristic, "");
         }
         else
         {
@@ -194,15 +197,14 @@ void PeripheralWinrt::GetCharacteristic(
     }
     else
     {
-        GetServiceFromDevice(serviceUuid, [=](std::optional<GattDeviceService> service) {
+        GetServiceFromDevice(serviceUuid, [=](std::optional<GattDeviceService> service, std::string error) {
             if (service)
             {
                 GetCharacteristicFromService(*service, characteristicUuid, callback);
             }
             else
             {
-                printf("GetCharacteristic: get service failed\n");
-                callback(nullptr);
+                callback(std::nullopt, error);
             }
         });
     }
@@ -210,7 +212,7 @@ void PeripheralWinrt::GetCharacteristic(
 
 void PeripheralWinrt::GetDescriptorFromCharacteristic(
     GattCharacteristic characteristic, UUID descriptorUuid,
-    std::function<void(std::optional<GattDescriptor>)> callback)
+    std::function<void(std::optional<GattDescriptor>, std::string)> callback)
 {
     characteristic.GetDescriptorsForUuidAsync(descriptorUuid, BluetoothCacheMode::Cached)
         .Completed([=](IAsyncOperation<GattDescriptorsResult> result, auto& status) {
@@ -227,24 +229,25 @@ void PeripheralWinrt::GetDescriptorFromCharacteristic(
                     CachedService& cachedService = cachedServices[serviceUuid];
                     CachedCharacteristic& c = cachedService.characterisitics[characteristicUuid];
                     c.descriptors.insert(std::make_pair(descriptorUuid, d));
-                    callback(d);
+                    callback(d, "");
                 }
                 else
                 {
-                    printf("GetDescriptorsForUuidAsync: no characteristic with given id\n");
-                    callback(std::nullopt);
+                    callback(std::nullopt, "GetDescriptorFromCharacteristic: no characteristic with given id");
                 }
             }
             else
             {
-                printf("GetDescriptorsForUuidAsync: failed with status: %d\n", status);
-                callback(std::nullopt);
+                std::stringstream ss;
+                ss << "GetDescriptorFromCharacteristic: failed with status: ";
+                ss << int(status);
+                callback(std::nullopt, ss.str());
             }
         });
 }
 
 void PeripheralWinrt::GetDescriptor(UUID serviceUuid, UUID characteristicUuid, UUID descriptorUuid,
-                                    std::function<void(std::optional<GattDescriptor>)> callback)
+                                    std::function<void(std::optional<GattDescriptor>, std::string)> callback)
 {
     auto it = cachedServices.find(serviceUuid);
     if (it != cachedServices.end())
@@ -259,27 +262,26 @@ void PeripheralWinrt::GetDescriptor(UUID serviceUuid, UUID characteristicUuid, U
         {
             GetCharacteristicFromService(
                 cachedService.service, characteristicUuid,
-                [=](std::optional<GattCharacteristic> characteristic) {
+                [=](std::optional<GattCharacteristic> characteristic, std::string error) {
                     if (characteristic)
                     {
                         GetDescriptorFromCharacteristic(*characteristic, descriptorUuid, callback);
                     }
                     else
                     {
-                        printf("GetDescriptor: get characteristic failed 1\n");
-                        callback(nullptr);
+                        callback(std::nullopt, error);
                     }
                 });
         }
     }
     else
     {
-        GetServiceFromDevice(serviceUuid, [=](std::optional<GattDeviceService> service) {
+        GetServiceFromDevice(serviceUuid, [=](std::optional<GattDeviceService> service, std::string error) {
             if (service)
             {
                 GetCharacteristicFromService(
                     *service, characteristicUuid,
-                    [=](std::optional<GattCharacteristic> characteristic) {
+                    [=](std::optional<GattCharacteristic> characteristic, std::string charError) {
                         if (characteristic)
                         {
                             GetDescriptorFromCharacteristic(*characteristic, descriptorUuid,
@@ -287,15 +289,13 @@ void PeripheralWinrt::GetDescriptor(UUID serviceUuid, UUID characteristicUuid, U
                         }
                         else
                         {
-                            printf("GetDescriptor: get characteristic failed 2\n");
-                            callback(nullptr);
+                            callback(std::nullopt, charError);
                         }
                     });
             }
             else
             {
-                printf("GetDescriptor: get service failed\n");
-                callback(nullptr);
+                callback(std::nullopt, error);
             }
         });
     }

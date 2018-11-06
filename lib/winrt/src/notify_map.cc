@@ -38,7 +38,6 @@ void NotifyMap::Unsubscribe(std::string uuid, GattCharacteristic characteristic)
     auto& it = mNotifyMap.find(key);
     if (it == mNotifyMap.end())
     {
-        printf("trying to unsubscribe without subscribing first\n");
         return;
     }
     auto& token = it->second;

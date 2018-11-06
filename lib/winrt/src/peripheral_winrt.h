@@ -63,11 +63,11 @@ public:
     void Disconnect();
 
     void GetService(UUID serviceUuid,
-                    std::function<void(std::optional<GattDeviceService>)> callback);
+                    std::function<void(std::optional<GattDeviceService>, std::string error)> callback);
     void GetCharacteristic(UUID serviceUuid, UUID characteristicUuid,
-                           std::function<void(std::optional<GattCharacteristic>)> callback);
+                           std::function<void(std::optional<GattCharacteristic>, std::string error)> callback);
     void GetDescriptor(UUID serviceUuid, UUID characteristicUuid, UUID descriptorUuid,
-                       std::function<void(std::optional<GattDescriptor>)> callback);
+                       std::function<void(std::optional<GattDescriptor>, std::string error)> callback);
 
     int rssi;
     uint64_t bluetoothAddress;
@@ -76,12 +76,12 @@ public:
 
 private:
     void GetServiceFromDevice(UUID serviceUuid,
-                              std::function<void(std::optional<GattDeviceService>)> callback);
+                              std::function<void(std::optional<GattDeviceService>, std::string error)> callback);
     void
     GetCharacteristicFromService(GattDeviceService service, UUID characteristicUuid,
-                                 std::function<void(std::optional<GattCharacteristic>)> callback);
+                                 std::function<void(std::optional<GattCharacteristic>, std::string error)> callback);
     void
     GetDescriptorFromCharacteristic(GattCharacteristic characteristic, UUID descriptorUuid,
-                                    std::function<void(std::optional<GattDescriptor>)> callback);
+                                    std::function<void(std::optional<GattDescriptor>, std::string error)> callback);
     std::unordered_map<UUID, CachedService> cachedServices;
 };
