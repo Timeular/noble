@@ -70,7 +70,7 @@ bcrypt-pbkdf@^1.0.0:
   dependencies:
     tweetnacl "^0.14.3"
 
-bindings@~1.3.0:
+bindings@^1.3.0, bindings@~1.3.0:
   version "1.3.0"
   resolved "https://registry.yarnpkg.com/bindings/-/bindings-1.3.0.tgz#b346f6ecf6a95f5a815c5839fc7cdb22502f1ed7"
 
@@ -80,6 +80,14 @@ bl@^1.0.0:
   dependencies:
     readable-stream "^2.3.5"
     safe-buffer "^5.1.1"
+
+"ble-adapter@git+https://github.com/Timeular/ble-adapter#6a405717dc630d9d580850e7921c53554cad17c9":
+  version "1.0.0"
+  resolved "git+https://github.com/Timeular/ble-adapter#6a405717dc630d9d580850e7921c53554cad17c9"
+  dependencies:
+    bindings "^1.3.0"
+    nan "^2.10.0"
+    prebuild-install "^5.0.0"
 
 bluetooth-hci-socket@^0.5.1:
   version "0.5.1"
@@ -650,7 +658,7 @@ ms@^2.1.1:
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/ms/-/ms-2.1.1.tgz#30a5864eb3ebb0a66f2ebe6d727af06a09d86e0a"
 
-nan@^2.0.5, nan@^2.4.0:
+nan@^2.0.5, nan@^2.10.0, nan@^2.4.0:
   version "2.11.1"
   resolved "https://registry.yarnpkg.com/nan/-/nan-2.11.1.tgz#90e22bccb8ca57ea4cd37cc83d3819b52eea6766"
 
