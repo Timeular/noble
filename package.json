@@ -59,7 +59,8 @@
     "pretest": "jshint *.js lib/. test/.",
     "test": "mocha -R spec test/*.js",
     "install": "prebuild-install --force || node-gyp rebuild",
-    "ci": "node --napi-modules ./test/test-ci.js"
+    "ci": "node --napi-modules ./test/test-ci.js",
+    "build:source": "node-gyp rebuild"
   },
   "browser": {
     "./lib/resolve-bindings.js": "./lib/resolve-bindings-web.js"
