@@ -141,6 +141,8 @@ const char* description(NSError *error) {
 
 - (BOOL)disconnect:(NSString*) uuid {
     IF(CBPeripheral*, peripheral, [self.peripherals objectForKey:uuid]) {
+        auto state = peripheral.state;
+        LOGE("disconnect called on %s state %ld", [uuid UTF8String], (long)state);
         [self.centralManager cancelPeripheralConnection:peripheral];
         return YES;
     }
@@ -150,6 +152,9 @@ const char* description(NSError *error) {
 
 -(void) centralManager:(CBCentralManager *)central didDisconnectPeripheral:(CBPeripheral *)peripheral error:(NSError *)error {
     std::string uuid = getUuid(peripheral);
+    if(error) {
+        LOGE("error %s %s", uuid.c_str(), description(error));
+    }
     emit.Disconnected(uuid);
 }
 
@@ -191,6 +196,9 @@ const char* description(NSError *error) {
 - (void) peripheral:(CBPeripheral *)peripheral didDiscoverServices:(NSError *)error {
     std::string uuid = getUuid(peripheral);
     std::vector<std::string> services = getServices(peripheral.services);
+    if(error) {
+        LOGE("error %s %s", uuid.c_str(), description(error));
+    }
     emit.ServicesDiscovered(uuid, services);
 }
 
