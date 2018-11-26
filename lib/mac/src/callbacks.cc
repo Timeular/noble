@@ -208,3 +208,10 @@ void Emit::WriteHandle(const std::string & uuid, int descriptorHandle) {
         args = { _s("handleWrite"), _u(uuid), _n(descriptorHandle) };
     });
 }
+
+void Emit::Log(const std::string& log) {
+    mCallback->call([log](Napi::Env env, std::vector<napi_value>& args) {
+        // emit('log', log);
+        args = { _s("log"), _s(log) };
+    });
+}

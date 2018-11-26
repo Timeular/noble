@@ -25,6 +25,7 @@ public:
     void WriteValue(const std::string& uuid, const std::string& serviceUuid, const std::string& characteristicUuid, const std::string& descriptorUuid);
     void ReadHandle(const std::string& uuid, int descriptorHandle, const std::vector<uint8_t>& data);
     void WriteHandle(const std::string& uuid, int descriptorHandle);
+    void Log(const std::string& log);
 protected:
     std::shared_ptr<ThreadSafeCallback> mCallback;
 };

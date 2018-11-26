@@ -1,5 +1,5 @@
 # vs 2017 image because Windows SDK 10.0.15063.0 is not available on vs 2015 image
-image: Visual Studio 2017
+image: Previous Visual Studio 2017
 
 platform:
 - x86
@@ -14,6 +14,7 @@ install:
   - ps: npm -v
   - ps: node-gyp -v
   - cmd: yarn install --frozen-lockfile
+  - cmd: yarn build:source
   - cmd: yarn ci
   - ps: $publish_binary = 0
   - ps: if ($env:appveyor_repo_tag -match "true") { $publish_binary=1; }
@@ -28,4 +29,5 @@ build_script:
         prebuild -t 6.14.4 -t 8.12.0 -r node --upload $env:prebuild_upload 2>&1 | write-host
         prebuild -t 2.0.0 -r electron --upload $env:prebuild_upload 2>&1 | write-host
       }
-      echo "done."
+      echo "done."
+

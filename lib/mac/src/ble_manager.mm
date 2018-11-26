@@ -9,6 +9,27 @@
 #import <Foundation/Foundation.h>
 
 #include "objc_cpp.h"
+#include <sstream>
+
+#define LOGE(message, ...) \
+{\
+    char buff[255];\
+    snprintf(buff, sizeof(buff), ": " message, __VA_ARGS__);\
+    std::string buffAsStdStr = __FUNCTION__;\
+    buffAsStdStr += buff;\
+    emit.Log(buffAsStdStr);\
+}
+
+const char* description(NSError *error) {
+    auto description = [error description];
+    if(description != nil) {
+        auto str = [description UTF8String];
+        if(str != NULL) {
+            return str;
+        }
+    }
+    return "<no description>";
+}
 
 @implementation BLEManager
 - (instancetype)init   {
@@ -80,7 +101,7 @@
     int rssi = [RSSI intValue];
     emit.Scan(uuid, rssi, p);
 }
-#include <sstream>
+
 - (BOOL)connect:(NSString*) uuid {
     CBPeripheral *peripheral = [self.peripherals objectForKey:uuid];
     if(!peripheral) {
@@ -91,8 +112,9 @@
             [self.peripherals setObject:peripheral forKey:uuid];
         } else {
             std::stringstream str;
-            str << "Peripheral not found! counts: ";
-            str << [peripherals count];
+            str << "Peripheral with uuid ";
+            str << [uuid UTF8String];
+            str << " not found!";
             emit.Connected([uuid UTF8String], str.str().c_str());
             return NO;
         }
@@ -111,7 +133,8 @@
     std::string uuid = getUuid(peripheral);
     std::string message = "Connection failed";
     if(error) {
-        message += ": " + std::string([[error debugDescription] UTF8String]);
+        message += ": ";
+        message += description(error);
     }
     emit.Connected(uuid, message);
 }
@@ -121,6 +144,7 @@
         [self.centralManager cancelPeripheralConnection:peripheral];
         return YES;
     }
+    LOGE("peripheral not found %s", [uuid UTF8String]);
     return NO;
 }
 
@@ -134,6 +158,7 @@
         [peripheral readRSSI];
         return YES;
     }
+    LOGE("peripheral not found %s", [uuid UTF8String]);
     return NO;
 }
 
@@ -159,6 +184,7 @@
         [peripheral discoverServices:servicesUuid];
         return YES;
     }
+    LOGE("peripheral not found %s", [uuid UTF8String]);
     return NO;
 }
 
@@ -181,13 +207,19 @@
             [peripheral discoverIncludedServices:includedServices forService:service];
             return YES;
         }
+        LOGE("service not found %s %s", [uuid UTF8String], [serviceUuid UTF8String]);
+        return NO;
     }
+    LOGE("peripheral not found %s", [uuid UTF8String]);
     return NO;
 }
 
 - (void)peripheral:(CBPeripheral *)peripheral didDiscoverIncludedServicesForService:(CBService *)service error:(NSError *)error {
     std::string uuid = getUuid(peripheral);
     auto serviceUuid = [[service.UUID UUIDString] UTF8String];
+    if(error) {
+        LOGE("error %s %s %s", uuid.c_str(), serviceUuid, description(error));
+    }
     std::vector<std::string> services = getServices(service.includedServices);
     emit.IncludedServicesDiscovered(uuid, serviceUuid, services);
 }
@@ -207,13 +239,19 @@
             [peripheral discoverCharacteristics:characteristicsUuid forService:service];
             return YES;
         }
+        LOGE("service not found %s %s", [uuid UTF8String], [serviceUuid UTF8String]);
+        return NO;
     }
+    LOGE("peripheral not found %s", [uuid UTF8String]);
     return NO;
 }
 
 -(void) peripheral:(CBPeripheral *)peripheral didDiscoverCharacteristicsForService:(CBService *)service error:(NSError *)error {
     std::string uuid = getUuid(peripheral);
-    std::string serviceUuid = std::string([service.UUID.UUIDString UTF8String]);
+    auto serviceUuid = [service.UUID.UUIDString UTF8String];
+    if(error) {
+        LOGE("error %s %s %s", uuid.c_str(), serviceUuid, description(error));
+    }
     auto characteristics = getCharacteristics(service.characteristics);
     emit.CharacteristicsDiscovered(uuid, serviceUuid, characteristics);
 }
@@ -225,14 +263,20 @@
             [peripheral readValueForCharacteristic:characteristic];
             return YES;
         }
+        LOGE("characteristic not found %s %s %s", [uuid UTF8String], [serviceUuid UTF8String], [characteristicUuid UTF8String]);
+        return NO;
     }
+    LOGE("peripheral not found %s", [uuid UTF8String]);
     return NO;
 }
 
 - (void) peripheral:(CBPeripheral *)peripheral didUpdateValueForCharacteristic:(CBCharacteristic *)characteristic error:(NSError *)error {
     std::string uuid = getUuid(peripheral);
-    std::string serviceUuid = [characteristic.service.UUID.UUIDString UTF8String];
-    std::string characteristicUuid = [characteristic.UUID.UUIDString UTF8String];
+    auto serviceUuid = [characteristic.service.UUID.UUIDString UTF8String];
+    auto characteristicUuid = [characteristic.UUID.UUIDString UTF8String];
+    if(error) {
+        LOGE("error %s %s %s %s", uuid.c_str(), serviceUuid, characteristicUuid, description(error));
+    }
     const UInt8* bytes = (UInt8 *)[characteristic.value bytes];
     Data data;
     data.assign(bytes, bytes+[characteristic.value length]);
@@ -251,14 +295,20 @@
             }
             return YES;
         }
+        LOGE("characteristic not found %s %s %s", [uuid UTF8String], [serviceUuid UTF8String], [characteristicUuid UTF8String]);
+        return NO;
     }
+    LOGE("peripheral not found %s", [uuid UTF8String]);
     return NO;
 }
 
 -(void) peripheral:(CBPeripheral *)peripheral didWriteValueForCharacteristic:(CBCharacteristic *)characteristic error:(NSError *)error {
     std::string uuid = getUuid(peripheral);
-    std::string serviceUuid = [characteristic.service.UUID.UUIDString UTF8String];
-    std::string characteristicUuid = [characteristic.UUID.UUIDString UTF8String];
+    auto serviceUuid = [characteristic.service.UUID.UUIDString UTF8String];
+    auto characteristicUuid = [characteristic.UUID.UUIDString UTF8String];
+    if(error) {
+        LOGE("error %s %s %s %s", uuid.c_str(), serviceUuid, characteristicUuid, description(error));
+    }
     emit.Write(uuid, serviceUuid, characteristicUuid);
 }
 
@@ -268,14 +318,20 @@
             [peripheral setNotifyValue:on forCharacteristic:characteristic];
             return YES;
         }
+        LOGE("characteristic not found %s %s %s", [uuid UTF8String], [serviceUuid UTF8String], [characteristicUuid UTF8String]);
+        return NO;
     }
+    LOGE("peripheral not found %s", [uuid UTF8String]);
     return NO;
 }
 
 - (void)peripheral:(CBPeripheral *)peripheral didUpdateNotificationStateForCharacteristic:(CBCharacteristic *)characteristic error:(NSError *)error {
     std::string uuid = getUuid(peripheral);
-    std::string serviceUuid = [characteristic.service.UUID.UUIDString UTF8String];
-    std::string characteristicUuid = [characteristic.UUID.UUIDString UTF8String];
+    auto serviceUuid = [characteristic.service.UUID.UUIDString UTF8String];
+    auto characteristicUuid = [characteristic.UUID.UUIDString UTF8String];
+    if(error) {
+        LOGE("error %s %s %s %s", uuid.c_str(), serviceUuid, characteristicUuid, description(error));
+    }
     emit.Notify(uuid, serviceUuid, characteristicUuid, characteristic.isNotifying);
 }
 
@@ -287,14 +343,20 @@
             [peripheral discoverDescriptorsForCharacteristic:characteristic];
             return YES;
         }
+        LOGE("characteristic not found %s %s %s", [uuid UTF8String], [serviceUuid UTF8String], [characteristicUuid UTF8String]);
+        return NO;
     }
+    LOGE("peripheral not found %s", [uuid UTF8String]);
     return NO;
 }
 
 - (void)peripheral:(CBPeripheral *)peripheral didDiscoverDescriptorsForCharacteristic:(CBCharacteristic *)characteristic error:(NSError *)error {
     std::string uuid = getUuid(peripheral);
-    std::string serviceUuid = [characteristic.service.UUID.UUIDString UTF8String];
-    std::string characteristicUuid = [characteristic.UUID.UUIDString UTF8String];
+    auto serviceUuid = [characteristic.service.UUID.UUIDString UTF8String];
+    auto characteristicUuid = [characteristic.UUID.UUIDString UTF8String];
+    if(error) {
+        LOGE("error %s %s %s %s", uuid.c_str(), serviceUuid, characteristicUuid, description(error));
+    }
     std::vector<std::string> descriptors = getDescriptors(characteristic.descriptors);
     emit.DescriptorsDiscovered(uuid, serviceUuid, characteristicUuid, descriptors);
 }
@@ -305,15 +367,21 @@
             [peripheral readValueForDescriptor:descriptor];
             return YES;
         }
+        LOGE("descriptor not found %s %s %s %s", [uuid UTF8String], [serviceUuid UTF8String], [characteristicUuid UTF8String], [descriptorUuid UTF8String]);
+        return NO;
     }
+    LOGE("peripheral not found %s", [uuid UTF8String]);
     return NO;
 }
 
 - (void)peripheral:(CBPeripheral *)peripheral didUpdateValueForDescriptor:(CBDescriptor *)descriptor error:(NSError *)error {
     std::string uuid = getUuid(peripheral);
-    std::string serviceUuid = [descriptor.characteristic.service.UUID.UUIDString UTF8String];
-    std::string characteristicUuid = [descriptor.characteristic.UUID.UUIDString UTF8String];
-    std::string descriptorUuid = [descriptor.UUID.UUIDString UTF8String];
+    auto serviceUuid = [descriptor.characteristic.service.UUID.UUIDString UTF8String];
+    auto characteristicUuid = [descriptor.characteristic.UUID.UUIDString UTF8String];
+    auto descriptorUuid = [descriptor.UUID.UUIDString UTF8String];
+    if(error) {
+        LOGE("error %s %s %s %s %s", uuid.c_str(), serviceUuid, characteristicUuid, descriptorUuid, description(error));
+    }
     const UInt8* bytes = (UInt8 *)[descriptor.value bytes];
     Data data;
     data.assign(bytes, bytes+[descriptor.value length]);
@@ -329,15 +397,21 @@
             [peripheral writeValue:data forDescriptor:descriptor];
             return YES;
         }
+        LOGE("descriptor not found %s %s %s %s", [uuid UTF8String], [serviceUuid UTF8String], [characteristicUuid UTF8String], [descriptorUuid UTF8String]);
+        return NO;
     }
+    LOGE("peripheral not found %s", [uuid UTF8String]);
     return NO;
 }
 
 - (void)peripheral:(CBPeripheral *)peripheral didWriteValueForDescriptor:(CBDescriptor *)descriptor error:(NSError *)error {
     std::string uuid = getUuid(peripheral);
-    std::string serviceUuid = [descriptor.characteristic.service.UUID.UUIDString UTF8String];
-    std::string characteristicUuid = [descriptor.characteristic.UUID.UUIDString UTF8String];
-    std::string descriptorUuid = [descriptor.UUID.UUIDString UTF8String];
+    auto serviceUuid = [descriptor.characteristic.service.UUID.UUIDString UTF8String];
+    auto characteristicUuid = [descriptor.characteristic.UUID.UUIDString UTF8String];
+    auto descriptorUuid = [descriptor.UUID.UUIDString UTF8String];
+    if(error) {
+        LOGE("error %s %s %s %s %s", uuid.c_str(), serviceUuid, characteristicUuid, descriptorUuid, description(error));
+    }
     IF(NSNumber*, handle, [self getDescriptorHandle:descriptor]) {
         emit.WriteHandle(uuid, [handle intValue]);
     }
@@ -350,7 +424,10 @@
             [peripheral readValueForDescriptor:descriptor];
             return YES;
         }
+        LOGE("descriptor not found %s handle %d", [uuid UTF8String], [handle intValue]);
+        return NO;
     }
+    LOGE("peripheral not found %s", [uuid UTF8String]);
     return NO;
 }
 
@@ -360,7 +437,10 @@
             [peripheral writeValue:data forDescriptor:descriptor];
             return YES;
         }
+        LOGE("descriptor not found %s handle %d", [uuid UTF8String], [handle intValue]);
+        return NO;
     }
+    LOGE("peripheral not found %s", [uuid UTF8String]);
     return NO;
 }
 
