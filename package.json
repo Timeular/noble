@@ -52,8 +52,7 @@
     "should": "~1.2.2",
     "sinon": "~1.6.0",
     "async": "~0.2.9",
-    "ws": "~0.4.31",
-    "ble-adapter": "git+https://github.com/Timeular/ble-adapter#1def774579f80a1fce74e2c6a5ba7b35f14c930e"
+    "ws": "~0.4.31"
   },
   "scripts": {
     "pretest": "jshint *.js lib/. test/.",
