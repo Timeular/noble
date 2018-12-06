@@ -77,7 +77,12 @@ void RadioWatcher::OnRadioChanged()
             {
                 if (radio)
                 {
-                    radio.StateChanged([=](Radio radio, auto&&) { radioStateChanged(radio); });
+                    mRadioStateChangedRevoker.revoke();
+                    mRadioStateChangedRevoker = radio.StateChanged(winrt::auto_revoke, [=](Radio radio, auto&&) { radioStateChanged(radio); });
+                }
+                else
+                {
+                    mRadioStateChangedRevoker.revoke();
                 }
                 radioStateChanged(radio);
                 mRadio = radio;
@@ -85,6 +90,7 @@ void RadioWatcher::OnRadioChanged()
         }
         else {
           mRadio = nullptr;
+          mRadioStateChangedRevoker.revoke();
           radioStateChanged(mRadio);
         }
     });
