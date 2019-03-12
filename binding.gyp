@@ -38,6 +38,7 @@
             'lib/winrt/src/notify_map.cc',
             'lib/winrt/src/ble_manager.cc',
             'lib/winrt/src/winrt_cpp.cc',
+			'lib/winrt/src/winrt_guid.cc',
             'lib/winrt/src/callbacks.cc',
           ],
           'msvs_settings': {
